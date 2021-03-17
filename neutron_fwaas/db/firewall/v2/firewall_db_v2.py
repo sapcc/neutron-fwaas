@@ -17,12 +17,12 @@ import copy
 
 import netaddr
 
+from neutron.db import common_db_mixin
 from neutron_lib import constants as nl_constants
 from neutron_lib.db import api as db_api
 from neutron_lib.db import constants as db_constants
 from neutron_lib.db import model_base
 from neutron_lib.db import model_query
-from neutron_lib.db import utils as db_utils
 from neutron_lib import exceptions
 from neutron_lib.exceptions import firewall_v2 as f_exc
 from oslo_config import cfg
@@ -180,7 +180,7 @@ def _list_firewall_policies_result_filter_hook(query, filters):
     return query
 
 
-class FirewallPluginDb(object):
+class FirewallPluginDb(common_db_mixin.CommonDbMixin):
 
     def __new__(cls, *args, **kwargs):
         model_query.register_hook(
@@ -200,19 +200,19 @@ class FirewallPluginDb(object):
 
     def _get_firewall_group(self, context, id):
         try:
-            return model_query.get_by_id(context, FirewallGroup, id)
+            return self._get_by_id(context, FirewallGroup, id)
         except exc.NoResultFound:
             raise f_exc.FirewallGroupNotFound(firewall_id=id)
 
     def _get_firewall_policy(self, context, id):
         try:
-            return model_query.get_by_id(context, FirewallPolicy, id)
+            return self._get_by_id(context, FirewallPolicy, id)
         except exc.NoResultFound:
             raise f_exc.FirewallPolicyNotFound(firewall_policy_id=id)
 
     def _get_firewall_rule(self, context, id):
         try:
-            return model_query.get_by_id(context, FirewallRuleV2, id)
+            return self._get_by_id(context, FirewallRuleV2, id)
         except exc.NoResultFound:
             raise f_exc.FirewallRuleNotFound(firewall_rule_id=id)
 
@@ -289,7 +289,7 @@ class FirewallPluginDb(object):
                'action': firewall_rule['action'],
                'enabled': firewall_rule['enabled'],
                'shared': firewall_rule['shared']}
-        return db_utils.resource_fields(res, fields)
+        return self._fields(res, fields)
 
     def _make_firewall_policy_dict(self, firewall_policy, fields=None):
         fw_rules = [
@@ -302,7 +302,7 @@ class FirewallPluginDb(object):
                'audited': firewall_policy['audited'],
                'firewall_rules': fw_rules,
                'shared': firewall_policy['shared']}
-        return db_utils.resource_fields(res, fields)
+        return self._fields(res, fields)
 
     def _make_firewall_group_dict(self, firewall_group_db, fields=None):
         fwg_ports = [port_assoc.port_id for port_assoc in
@@ -319,7 +319,7 @@ class FirewallPluginDb(object):
                'ports': fwg_ports,
                'status': firewall_group_db['status'],
                'shared': firewall_group_db['shared']}
-        return db_utils.resource_fields(res, fields)
+        return self._fields(res, fields)
 
     def _get_policy_ordered_rules(self, context, policy_id):
         query = (context.session.query(FirewallRuleV2)
@@ -593,9 +593,9 @@ class FirewallPluginDb(object):
         return self._make_firewall_rule_dict(fwr, fields, policies=policies)
 
     def get_firewall_rules(self, context, filters=None, fields=None):
-        return model_query.get_collection(
-            context, FirewallRuleV2, self._make_firewall_rule_dict,
-            filters=filters, fields=fields)
+        return self._get_collection(context, FirewallRuleV2,
+                                    self._make_firewall_rule_dict,
+                                    filters=filters, fields=fields)
 
     def _get_rules_in_policy(self, context, fwpid):
         """Gets rules in a firewall policy"""
@@ -634,8 +634,8 @@ class FirewallPluginDb(object):
 
     def _check_rules_for_policy_is_valid(self, context, fwp, fwp_db,
                                          rule_id_list, filters):
-        rules_in_fwr_db = model_query.get_collection_query(
-            context, FirewallRuleV2, filters=filters)
+        rules_in_fwr_db = self._get_collection_query(context, FirewallRuleV2,
+                                                 filters=filters)
         rules_dict = dict((fwr_db['id'], fwr_db) for fwr_db in rules_in_fwr_db)
         for fwrule_id in rule_id_list:
             if fwrule_id not in rules_dict:
@@ -730,7 +730,7 @@ class FirewallPluginDb(object):
             # we need care about the associations related with this policy
             # and its rules only.
             filters['firewall_policy_id'] = [fwp_db['id']]
-            rules_in_fpol_rul_db = model_query.get_collection_query(
+            rules_in_fpol_rul_db = self._get_collection_query(
                 context,
                 FirewallPolicyRuleAssociation,
                 filters=filters)
@@ -815,9 +815,9 @@ class FirewallPluginDb(object):
         return self._make_firewall_policy_dict(fwp, fields)
 
     def get_firewall_policies(self, context, filters=None, fields=None):
-        return model_query.get_collection(
-            context, FirewallPolicy, self._make_firewall_policy_dict,
-            filters=filters, fields=fields)
+        return self._get_collection(context, FirewallPolicy,
+                                    self._make_firewall_policy_dict,
+                                    filters=filters, fields=fields)
 
     def _set_ports_for_firewall_group(self, context, fwg_db, fwg):
         port_id_list = fwg['ports']
@@ -1092,9 +1092,9 @@ class FirewallPluginDb(object):
             tenant_id = filters.get('tenant_id') if filters else None
             tenant_id = tenant_id[0] if tenant_id else context.tenant_id
             self._ensure_default_firewall_group(context, tenant_id)
-        return model_query.get_collection(
-            context, FirewallGroup, self._make_firewall_group_dict,
-            filters=filters, fields=fields)
+        return self._get_collection(context, FirewallGroup,
+                                    self._make_firewall_group_dict,
+                                    filters=filters, fields=fields)
 
 
 def _is_default(fwg_db):
