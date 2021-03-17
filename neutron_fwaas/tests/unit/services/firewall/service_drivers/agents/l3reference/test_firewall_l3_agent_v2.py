@@ -431,7 +431,7 @@ class TestFWaaSL3AgentExtension(base.BaseTestCase):
         ri = self._prepare_router_data()
         ri.internal_ports = ports
         router_info = {ri.router_id: ri}
-        api_object = l3_agent_api.L3AgentExtensionAPI(router_info, None)
+        api_object = l3_agent_api.L3AgentExtensionAPI(router_info)
         self.api.consume_api(api_object)
         fw_port_ids = port_ids
 
@@ -450,7 +450,7 @@ class TestFWaaSL3AgentExtension(base.BaseTestCase):
         ri.internal_ports = ports
         router_info = {}
         router_info[ri.router_id] = ri
-        api_object = l3_agent_api.L3AgentExtensionAPI(router_info, None)
+        api_object = l3_agent_api.L3AgentExtensionAPI(router_info)
         self.api.consume_api(api_object)
         fw_port_ids = port_ids
         ports_for_fw_expected = [(ri, port_ids)]
