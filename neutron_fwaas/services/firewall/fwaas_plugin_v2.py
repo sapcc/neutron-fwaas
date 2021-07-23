@@ -69,6 +69,7 @@ class FirewallPluginV2(Firewallv2PluginBase):
 
         self.driver_name = default_provider
         self.driver = drivers[default_provider]
+        self.l3_plugin = directory.get_plugin(plugin_const.L3)
 
         # start rpc listener if driver required
         if isinstance(self.driver, driver_api.FirewallDriverRPCMixin):
@@ -162,12 +163,19 @@ class FirewallPluginV2(Firewallv2PluginBase):
         # TODO(sridar): elevated context and do we want to use public ?
         for port_id in fwg_ports:
             port = self._core_plugin.get_port(context, port_id)
-
-            if port['tenant_id'] != tenant_id:
+            device_owner = port.get('device_owner', '')
+            port_tenant_id = port['tenant_id']
+            if device_owner == nl_constants.DEVICE_OWNER_ROUTER_GW:
+                # The gateway interface has no tenant, test if the gateway interface's router
+                # is owned by the tenant requestor
+                router = self.l3_plugin.get_router(context, port['device_id'])
+                if router:
+                    port_tenant_id = router['tenant_id']
+            if port_tenant_id != tenant_id:
                 raise f_exc.FirewallGroupPortInvalidProject(
                     port_id=port_id, project_id=port['tenant_id'])
-            device_owner = port.get('device_owner', '')
-            if device_owner in nl_constants.ROUTER_INTERFACE_OWNERS:
+            elif device_owner in (nl_constants.DEVICE_OWNER_ROUTER_GW,
+                                  *nl_constants.ROUTER_INTERFACE_OWNERS):
                 if not self.driver.is_supported_l3_port(port):
                     raise exceptions.FirewallGroupPortNotSupported(
                         driver_name=self.driver_name, port_id=port_id)
