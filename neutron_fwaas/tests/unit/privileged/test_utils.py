@@ -16,6 +16,8 @@
 import mock
 import testtools
 
+from pyroute2 import netns as pynetns
+
 from neutron_fwaas.privileged import utils
 from neutron_fwaas.tests import base
 
@@ -38,8 +40,7 @@ class InNamespaceTest(base.BaseTestCase):
         self.close_mock = close_patch.start()
         self.addCleanup(close_patch.stop)
 
-        self.setns_mock = mock.patch(
-            'pyroute2.netns.setns').start()
+        self.setns_mock = mock.patch.object(pynetns, 'setns').start()
 
     def test_in_namespace(self):
         with utils.in_namespace(self.NEW_NETNS):
