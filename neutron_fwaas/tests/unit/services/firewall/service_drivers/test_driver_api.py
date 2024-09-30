@@ -206,14 +206,16 @@ class FireWallDriverDBMixinTestCase(test_fwaas_plugin_v2.
             r = router.Router(self.ctx, id=uuidutils.generate_uuid(),
                               project_id=subnet['subnet']['tenant_id'])
             r.create()
-            with self.port(subnet=subnet, device_id=r.id, tenant_id=None,
-                           device_owner=nl_constants.DEVICE_OWNER_ROUTER_GW) as gwport, self.firewall_policy() as pol:
+            with (self.port(subnet=subnet, device_id=r.id, tenant_id=None,
+                           device_owner=nl_constants.DEVICE_OWNER_ROUTER_GW, is_admin=True) as gwport,
+                    self.firewall_policy(as_admin=True) as pol):
                 with mock.patch.object(self.plugin.l3_plugin, 'get_router',
                                        return_value=dict(tenant_id=subnet['subnet']['tenant_id'])):
                     with mock.patch.object(self.plugin.driver,
                                            'is_supported_l3_port', return_value=True):
                         fwg_kwargs = dict(ingress_firewall_policy_id=pol['firewall_policy']['id'],
-                                          ports=[gwport['port']['id']])
+                                          ports=[gwport['port']['id']],
+                                          as_admin=True)
 
                         with self.firewall_group(**fwg_kwargs) as fwg:
                             self.assertIsNotNone(fwg)
@@ -226,8 +228,9 @@ class FireWallDriverDBMixinTestCase(test_fwaas_plugin_v2.
             r = router.Router(self.ctx, ids=uuidutils.generate_uuid(),
                               project_id=subnet['subnet']['tenant_id'])
             r.create()
-            with self.port(subnet=subnet, device_id=r.id, tenant_id=None,
-                           device_owner=nl_constants.DEVICE_OWNER_ROUTER_GW) as gwport, self.firewall_policy() as pol:
+            with (self.port(subnet=subnet, device_id=r.id, tenant_id=tenant_id,
+                           device_owner=nl_constants.DEVICE_OWNER_ROUTER_GW, is_admin=True) as gwport,
+                    self.firewall_policy(as_admin=True) as pol):
                 def call_ctx_mgr(method, *args, **kwargs):
                     with method(*args, **kwargs):
                         pass
@@ -236,7 +239,8 @@ class FireWallDriverDBMixinTestCase(test_fwaas_plugin_v2.
                                        return_value=dict(tenant_id=subnet['subnet']['tenant_id'])):
                     fwg_kwargs = dict(ingress_firewall_policy_id=pol['firewall_policy']['id'],
                                       ports=[gwport['port']['id']],
-                                    tenant_id=uuidutils.generate_uuid())
+                                      tenant_id=uuidutils.generate_uuid(),
+                                      as_admin=True)
                     self.assertRaisesRegex(HTTPClientError, 'Operation cannot be performed as port .* '
                                                             'is in an invalid project',
                                            call_ctx_mgr, self.firewall_group, **fwg_kwargs)
