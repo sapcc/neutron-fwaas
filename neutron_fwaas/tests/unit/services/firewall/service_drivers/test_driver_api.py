@@ -201,45 +201,51 @@ class FireWallDriverDBMixinTestCase(test_fwaas_plugin_v2.
                                        payload=self.m_payload)
 
     def test_add_router_external_port_to_fwg(self):
+        tenant_id = uuidutils.generate_uuid()
         self.plugin.l3_plugin = mock.Mock()
-        with self.subnet() as subnet:
+        # self.firewall_group doesn't support set_context, so generate the context manually
+        ctx = self._get_nonadmin_context(tenant_id=tenant_id)
+        with self.subnet(set_context=True) as subnet:
             r = router.Router(self.ctx, id=uuidutils.generate_uuid(),
-                              project_id=subnet['subnet']['tenant_id'])
+                              project_id=tenant_id, set_context=True)
             r.create()
             with self.port(subnet=subnet, device_id=r.id, tenant_id=None,
-                           device_owner=nl_constants.DEVICE_OWNER_ROUTER_GW) as gwport, self.firewall_policy() as pol:
+                           device_owner=nl_constants.DEVICE_OWNER_ROUTER_GW,
+                           set_context=True) as gwport, self.firewall_policy() as pol:
                 with mock.patch.object(self.plugin.l3_plugin, 'get_router',
-                                       return_value=dict(tenant_id=subnet['subnet']['tenant_id'])):
+                                       return_value=dict(tenant_id=tenant_id)):
                     with mock.patch.object(self.plugin.driver,
                                            'is_supported_l3_port', return_value=True):
                         fwg_kwargs = dict(ingress_firewall_policy_id=pol['firewall_policy']['id'],
                                           ports=[gwport['port']['id']])
 
-                        with self.firewall_group(**fwg_kwargs) as fwg:
+                        with self.firewall_group(**fwg_kwargs, context=ctx) as fwg:
                             self.assertIsNotNone(fwg)
 
     def test_add_router_foreign_external_port_to_fwg(self):
         tenant_id = uuidutils.generate_uuid()
         self.plugin.l3_plugin = mock.Mock()
-
-        with self.subnet(tenant_id=tenant_id) as subnet:
+        with self.subnet(set_context=True) as subnet:
             r = router.Router(self.ctx, ids=uuidutils.generate_uuid(),
-                              project_id=subnet['subnet']['tenant_id'])
+                              project_id=tenant_id, set_context=True)
             r.create()
             with self.port(subnet=subnet, device_id=r.id, tenant_id=None,
-                           device_owner=nl_constants.DEVICE_OWNER_ROUTER_GW) as gwport, self.firewall_policy() as pol:
+                           device_owner=nl_constants.DEVICE_OWNER_ROUTER_GW,
+                           set_context=True) as gwport, self.firewall_policy() as pol:
                 def call_ctx_mgr(method, *args, **kwargs):
                     with method(*args, **kwargs):
                         pass
 
                 with mock.patch.object(self.plugin.l3_plugin, 'get_router',
-                                       return_value=dict(tenant_id=subnet['subnet']['tenant_id'])):
+                                       return_value=dict(tenant_id=tenant_id)):
+                    foreign_tenant_id = uuidutils.generate_uuid()
                     fwg_kwargs = dict(ingress_firewall_policy_id=pol['firewall_policy']['id'],
                                       ports=[gwport['port']['id']],
-                                    tenant_id=uuidutils.generate_uuid())
+                                      tenant_id=foreign_tenant_id)
+                    ctx = self._get_nonadmin_context(tenant_id=foreign_tenant_id)
                     self.assertRaisesRegex(HTTPClientError, 'Operation cannot be performed as port .* '
                                                             'is in an invalid project',
-                                           call_ctx_mgr, self.firewall_group, **fwg_kwargs)
+                                           call_ctx_mgr, self.firewall_group, **fwg_kwargs, context=ctx)
 
     def test_create_firewall_rule(self):
 
