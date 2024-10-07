@@ -23,6 +23,7 @@ from neutron_lib.callbacks import events
 from neutron_lib.callbacks import registry
 from neutron_lib.callbacks import resources
 from neutron_lib import constants as nl_constants
+from neutron_lib import context as n_context
 from neutron_lib.db import api as db_api
 from neutron_lib.exceptions import firewall_v2 as f_exc
 from neutron_lib.plugins import constants as plugin_const
@@ -162,7 +163,8 @@ class FirewallPluginV2(Firewallv2PluginBase):
         """
         # TODO(sridar): elevated context and do we want to use public ?
         for port_id in fwg_ports:
-            port = self._core_plugin.get_port(context, port_id)
+            admin_ctx = n_context.get_admin_context()
+            port = self._core_plugin.get_port(admin_ctx, port_id)
             device_owner = port.get('device_owner', '')
             port_tenant_id = port['tenant_id']
             if device_owner == nl_constants.DEVICE_OWNER_ROUTER_GW:
