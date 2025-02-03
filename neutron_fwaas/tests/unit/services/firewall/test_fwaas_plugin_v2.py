@@ -347,15 +347,16 @@ class FirewallPluginV2TestCase(test_db_plugin.NeutronDbPluginV2TestCase):
             'egress_firewall_policy_id': egress_firewall_policy_id,
             'admin_state_up': admin_state_up}}
         ctx = kwargs.get('context', None)
+        # Without this, the project_id always is set to self._project_id
+        project_id = kwargs.get('project_id', self._project_id)
         if ctx is None or ctx.is_admin:
-            project_id = kwargs.get('project_id', self._project_id)
             data['firewall_group'].update({'tenant_id': project_id})
             data['firewall_group'].update({'project_id': project_id})
         if ports is not None:
             data['firewall_group'].update({'ports': ports})
 
         req = self.new_create_request('firewall_groups', data, fmt,
-                                      context=ctx, as_admin=as_admin)
+                                      context=ctx, as_admin=as_admin, project_id=project_id)
         res = req.get_response(self.ext_api)
         if expected_res_status:
             self.assertEqual(expected_res_status, res.status_int)
