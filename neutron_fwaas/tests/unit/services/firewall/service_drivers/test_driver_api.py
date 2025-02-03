@@ -206,33 +206,35 @@ class FireWallDriverDBMixinTestCase(test_fwaas_plugin_v2.
         self.plugin.l3_plugin = mock.Mock()
         # self.firewall_group doesn't support set_context, so generate the context manually
         ctx = self._get_nonadmin_context(tenant_id=tenant_id)
-        with self.subnet(set_context=True) as subnet:
+
+        with self.subnet() as subnet:
             r = router.Router(self.ctx, id=uuidutils.generate_uuid(),
                               project_id=tenant_id, set_context=True)
             r.create()
+            # Neutron TestingCase assigns a default tenant_id
+            # This does not change the logic behind the test
             with self.port(subnet=subnet, device_id=r.id, tenant_id=None,
-                           device_owner=nl_constants.DEVICE_OWNER_ROUTER_GW, is_admin=True,
-                           set_context=True) as gwport, self.firewall_policy(as_admin=True) as pol:
+                           device_owner=nl_constants.DEVICE_OWNER_ROUTER_GW,
+                           is_admin=True) as gwport, self.firewall_policy(as_admin=True) as pol:
                 with mock.patch.object(self.plugin.l3_plugin, 'get_router',
                                        return_value=dict(tenant_id=tenant_id)):
                     with mock.patch.object(self.plugin.driver,
                                            'is_supported_l3_port', return_value=True):
                         fwg_kwargs = dict(ingress_firewall_policy_id=pol['firewall_policy']['id'],
-                                          ports=[gwport['port']['id']],
-                                          as_admin=True)
+                                          ports=[gwport['port']['id']])
 
-                        with self.firewall_group(**fwg_kwargs, context=ctx) as fwg:
+                        with self.firewall_group(**fwg_kwargs, context=ctx, tenant_id=tenant_id) as fwg:
                             self.assertIsNotNone(fwg)
 
     def test_add_router_foreign_external_port_to_fwg(self):
         tenant_id = uuidutils.generate_uuid()
         self.plugin.l3_plugin = mock.Mock()
-        with self.subnet(set_context=True) as subnet:
+        with self.subnet() as subnet:
             r = router.Router(self.ctx, ids=uuidutils.generate_uuid(),
                               project_id=tenant_id, set_context=True)
             r.create()
             with self.port(subnet=subnet, device_id=r.id, tenant_id=None,
-                           device_owner=nl_constants.DEVICE_OWNER_ROUTER_GW, as_admin=True,
+                           device_owner=nl_constants.DEVICE_OWNER_ROUTER_GW, is_admin=True,
                            set_context=True) as gwport, self.firewall_policy(as_admin=True) as pol:
                 def call_ctx_mgr(method, *args, **kwargs):
                     with method(*args, **kwargs):
