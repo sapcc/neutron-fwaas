@@ -386,8 +386,7 @@ class FirewallPluginV2TestCase(test_db_plugin.NeutronDbPluginV2TestCase):
             req = self.new_update_request(
                 'firewall_groups',
                 data,
-                firewall_group['firewall_group']['id'],
-                as_admin=True,
+                firewall_group['firewall_group']['id']
             )
             req.get_response(self.ext_api)
             self._delete('firewall_groups',
