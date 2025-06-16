@@ -615,6 +615,7 @@ class FirewallPluginDb:
         policies = self.get_policies_with_rule(context, id) or None
         return self._make_firewall_rule_dict(fwr, fields, policies=policies)
 
+    @db_api.CONTEXT_READER
     def get_firewall_rules(self, context, filters=None, fields=None):
         project_id = filters.get('project_id', [None])[0] if filters else None
         self._ensure_default_firewall_group(context, project_id)
@@ -841,6 +842,7 @@ class FirewallPluginDb:
         fwp = self._get_firewall_policy(context, id)
         return self._make_firewall_policy_dict(fwp, fields)
 
+    @db_api.CONTEXT_READER
     def get_firewall_policies(self, context, filters=None, fields=None):
         project_id = filters.get('project_id', [None])[0] if filters else None
         self._ensure_default_firewall_group(context, project_id)
