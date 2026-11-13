@@ -247,7 +247,7 @@ class FireWallDriverDBMixinTestCase(test_fwaas_plugin_v2.
                                       ports=[gwport['port']['id']],
                                       tenant_id=foreign_tenant_id,
                                       as_admin=True)
-                    ctx = self._get_nonadmin_context(tenant_id=foreign_tenant_id)
+                    ctx = self._get_nonadmin_context(project_id=foreign_tenant_id)
                     self.assertRaisesRegex(HTTPClientError, 'Operation cannot be performed as port .* '
                                                             'is in an invalid project',
                                            call_ctx_mgr, self.firewall_group, **fwg_kwargs, context=ctx)
