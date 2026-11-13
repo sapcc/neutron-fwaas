@@ -205,7 +205,7 @@ class FireWallDriverDBMixinTestCase(test_fwaas_plugin_v2.
         tenant_id = uuidutils.generate_uuid()
         self.plugin.l3_plugin = mock.Mock()
         # self.firewall_group doesn't support set_context, so generate the context manually
-        ctx = self._get_nonadmin_context(tenant_id=tenant_id)
+        ctx = self._get_nonadmin_context(project_id=tenant_id)
 
         with self.subnet() as subnet:
             r = router.Router(self.ctx, id=uuidutils.generate_uuid(),
